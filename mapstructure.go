@@ -82,6 +82,10 @@ type DecoderConfig struct {
 	// The tag name that mapstructure reads for field names. This
 	// defaults to "mapstructure"
 	TagName string
+
+	// If DisableTag is true, no StructTag will be checked. All embedded structs
+	// will be squashed by default
+	DisableTag bool
 }
 
 // A Decoder takes a raw interface value and turns it into structured
@@ -636,13 +640,19 @@ func (d *Decoder) decodeStruct(name string, data interface{}, val reflect.Value)
 				}
 			}
 
-			// If "squash" is specified in the tag, we squash the field down.
 			squash := false
-			tagParts := strings.Split(fieldType.Tag.Get(d.config.TagName), ",")
-			for _, tag := range tagParts[1:] {
-				if tag == "squash" {
+			if d.config.DisableTag {
+				if fieldKind == reflect.Struct {
 					squash = true
-					break
+				}
+			} else {
+				// If "squash" is specified in the tag, we squash the field down.
+				tagParts := strings.Split(fieldType.Tag.Get(d.config.TagName), ",")
+				for _, tag := range tagParts[1:] {
+					if tag == "squash" {
+						squash = true
+						break
+					}
 				}
 			}
 
@@ -664,10 +674,12 @@ func (d *Decoder) decodeStruct(name string, data interface{}, val reflect.Value)
 	for fieldType, field := range fields {
 		fieldName := fieldType.Name
 
-		tagValue := fieldType.Tag.Get(d.config.TagName)
-		tagValue = strings.SplitN(tagValue, ",", 2)[0]
-		if tagValue != "" {
-			fieldName = tagValue
+		if !d.config.DisableTag {
+			tagValue := fieldType.Tag.Get(d.config.TagName)
+			tagValue = strings.SplitN(tagValue, ",", 2)[0]
+			if tagValue != "" {
+				fieldName = tagValue
+			}
 		}
 
 		rawMapKey := reflect.ValueOf(fieldName)

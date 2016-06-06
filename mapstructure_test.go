@@ -234,6 +234,44 @@ func TestDecode_Embedded(t *testing.T) {
 	}
 }
 
+func TestDecode_EmbeddedDisableTag(t *testing.T) {
+	t.Parallel()
+
+	input := map[string]interface{}{
+		"vstring": "innerfoo",
+		"vunique": "bar",
+		"Vuint":   55,
+	}
+
+	var result Embedded
+	config := &DecoderConfig{
+		Metadata:   nil,
+		Result:     &result,
+		DisableTag: true,
+	}
+
+	decoder, err := NewDecoder(config)
+	if err != nil {
+		t.Fatalf("got an err: %s", err.Error())
+	}
+
+	if err := decoder.Decode(input); err != nil {
+		t.Fatalf("got an err: %s", err.Error())
+	}
+
+	if result.Vstring != "innerfoo" {
+		t.Errorf("vstring value should be 'innerfoo': %#v", result.Vstring)
+	}
+
+	if result.Vunique != "bar" {
+		t.Errorf("vunique value should be 'bar': %#v", result.Vunique)
+	}
+
+	if result.Vuint != uint(55) {
+		t.Errorf("Vuint value should be 55: %d", result.Vuint)
+	}
+}
+
 func TestDecode_EmbeddedPointer(t *testing.T) {
 	t.Parallel()
 
@@ -288,6 +326,35 @@ func TestDecode_SquashOnNonStructType(t *testing.T) {
 		t.Fatal("unexpected success decoding invalid squash field type")
 	} else if !strings.Contains(err.Error(), "unsupported type for squash") {
 		t.Fatalf("unexpected error message for invalid squash field type: %s", err)
+	}
+}
+
+func TestDecode_SquashOnNonStructTypeDisableTag(t *testing.T) {
+	t.Parallel()
+
+	input := map[string]interface{}{
+		"InvalidSquashType": 42,
+	}
+
+	var result SquashOnNonStructType
+
+	config := &DecoderConfig{
+		Metadata:   nil,
+		Result:     &result,
+		DisableTag: true,
+	}
+
+	decoder, err := NewDecoder(config)
+	if err != nil {
+		t.Fatalf("got an err: %s", err.Error())
+	}
+
+	if err := decoder.Decode(input); err != nil {
+		t.Fatalf("got an err: %s", err.Error())
+	}
+
+	if result.InvalidSquashType != 42 {
+		t.Errorf("InvalidSquashType should be 42: %d", result.InvalidSquashType)
 	}
 }
 
@@ -983,6 +1050,39 @@ func TestTagged(t *testing.T) {
 	err := Decode(input, &result)
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
+	}
+
+	if result.Value != "bar" {
+		t.Errorf("value should be 'bar', got: %#v", result.Value)
+	}
+
+	if result.Extra != "value" {
+		t.Errorf("extra should be 'value', got: %#v", result.Extra)
+	}
+}
+
+func TestTaggedDisableTag(t *testing.T) {
+	t.Parallel()
+
+	input := map[string]interface{}{
+		"value": "bar",
+		"extra": "value",
+	}
+
+	var result Tagged
+	config := &DecoderConfig{
+		Metadata:   nil,
+		Result:     &result,
+		DisableTag: true,
+	}
+
+	decoder, err := NewDecoder(config)
+	if err != nil {
+		t.Fatalf("got an err: %s", err.Error())
+	}
+
+	if err := decoder.Decode(input); err != nil {
+		t.Fatalf("got an err: %s", err.Error())
 	}
 
 	if result.Value != "bar" {
